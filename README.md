@@ -2,12 +2,85 @@
 
 Order management system for Murmmy Ice Cream Cereal shop.
 
+---
+
+## Shop Setup (Windows PC)
+
+Only two things are needed: **Docker Desktop** and the **docker-compose.yml** file.
+
+### 1. Install Docker Desktop
+
+Download and install from https://www.docker.com/products/docker-desktop/
+
+After installing, open Docker Desktop and make sure it's running (the whale icon should be in the system tray).
+
+### 2. Create a folder and the compose file
+
+1. Create a folder anywhere, for example `C:\Murmmy`
+2. Inside that folder, create a file called `docker-compose.yml` with this content:
+
+```yaml
+services:
+  commandas:
+    image: aldaiirnava/murmmy-commandas:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./commandas-data:/app/data
+    environment:
+      - PORT=3000
+      - JWT_SECRET=murmmy-commandas-secret-key
+      - DB_PATH=/app/data/commandas.db
+    restart: unless-stopped
+```
+
+### 3. Start the app
+
+Open a terminal (PowerShell or CMD) in that folder and run:
+
+```bash
+docker compose up -d
+```
+
+That's it. The app will download automatically and start running.
+
+### 4. Open the app
+
+- From the shop PC: http://localhost:3000
+- From phones/tablets on the same Wi-Fi: `http://<pc-ip>:3000`
+
+To find the PC's IP, open CMD and run:
+
+```bash
+ipconfig
+```
+
+Look for the **IPv4 Address** under your Wi-Fi or Ethernet adapter (e.g. `192.168.1.100`).
+
+### Update to the latest version
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+### Stop the app
+
+```bash
+docker compose down
+```
+
+### Data
+
+All data is saved in the `commandas-data` folder next to the compose file. This folder is created automatically. Do not delete it — it contains all orders, tables, and settings.
+
+---
+
 ## Development
 
 ### Prerequisites
 
 - Node.js 20+
-- Docker (optional, for production)
 
 ### Install dependencies
 
@@ -30,13 +103,13 @@ Open http://localhost:5173
 
 ### Access from other devices on the network
 
-To access from phones/tablets on the same Wi-Fi, start the client with `--host`:
+Start the client with `--host`:
 
 ```bash
 cd client && npm run dev -- --host
 ```
 
-Then open `http://<your-ip>:5173` from the other device (e.g. `http://192.168.1.100:5173`).
+Then open `http://<your-ip>:5173` from the other device.
 
 Find your IP with:
 
@@ -48,31 +121,10 @@ ipconfig getifaddr en0
 hostname -I
 ```
 
-## Production (Docker)
+### Build and run with Docker locally
 
 ```bash
-docker compose up --build -d
+docker compose up --build
 ```
 
-The app runs on port 3000. Accessible from any device on the network at `http://<your-ip>:3000`.
-
-### Data location
-
-Data (SQLite database) is persisted in `./commandas-data/` by default. To store it elsewhere, set `DATA_DIR`:
-
-```bash
-# Example: store data on the Windows C: drive (WSL)
-DATA_DIR=/mnt/c/MurmmyData docker compose up --build -d
-
-# Example: custom Linux path
-DATA_DIR=/home/murmmy/data docker compose up --build -d
-```
-
-The directory will be created automatically. Make sure the path exists and is writable.
-
-## Default credentials
-
-- Username: `murmmy-orderer`
-- Password: `murmmy2026`
-
-Change the password in Settings after first login.
+This builds the image locally instead of pulling from Docker Hub.
