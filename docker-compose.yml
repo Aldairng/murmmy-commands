@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  commandas:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ${DATA_DIR:-./commandas-data}:/app/data
+    environment:
+      - PORT=3000
+      - JWT_SECRET=murmmy-commandas-secret-key
+      - DB_PATH=/app/data/commandas.db
+    restart: unless-stopped

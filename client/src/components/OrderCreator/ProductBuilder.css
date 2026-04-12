@@ -1,0 +1,59 @@
+.product-builder {
+  max-width: 700px;
+}
+
+.builder-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.builder-header h2 {
+  font-size: 1.25rem;
+}
+
+.builder-section {
+  margin-bottom: 1rem;
+}
+
+.type-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 0.65rem;
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.type-btn:hover {
+  border-color: var(--accent);
+}
+
+.type-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.builder-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.builder-actions .btn-primary {
+  flex: 1;
+  padding: 0.65rem;
+  font-size: 0.95rem;
+}
