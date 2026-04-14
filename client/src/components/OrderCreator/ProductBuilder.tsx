@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Cereal, Topping, Syrup, Favorite, OrderItem } from '../../types';
 import './ProductBuilder.css';
@@ -26,9 +26,19 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
   const [type, setType] = useState<'icecream' | 'milkshake' | 'water'>(editingItem?.type || 'icecream');
   const [selectedCereals, setSelectedCereals] = useState<number[]>(editingItem?.cereal_ids || []);
   const [selectedToppings, setSelectedToppings] = useState<number[]>(editingItem?.topping_ids || []);
-  const [selectedSyrup, setSelectedSyrup] = useState<number | null>(editingItem?.syrup_id || null);
+  const [selectedSyrup, setSelectedSyrup] = useState<number | null>(editingItem?.syrup_id ?? null);
   const [selectedFavoriteId, setSelectedFavoriteId] = useState<number | null>(editingItem?.favorite_id || null);
   const [notes, setNotes] = useState(editingItem?.notes || '');
+
+  // Explicit "none" choices — only true when waiter actively picks them
+  const [noTopping, setNoTopping] = useState(editingItem ? editingItem.topping_ids.length === 0 : false);
+  const [noSyrup, setNoSyrup] = useState(editingItem ? editingItem.syrup_id === null : false);
+
+  // Show validation errors only after first attempt
+  const [attempted, setAttempted] = useState(false);
+  const cerealRef = useRef<HTMLDivElement>(null);
+  const toppingRef = useRef<HTMLDivElement>(null);
+  const syrupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -53,7 +63,24 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
 
   const toggleTopping = (id: number) => {
     setSelectedFavoriteId(null);
+    setNoTopping(false);
     setSelectedToppings((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  };
+
+  const handleNoTopping = () => {
+    setSelectedFavoriteId(null);
+    setNoTopping(true);
+    setSelectedToppings([]);
+  };
+
+  const handleSelectSyrup = (id: number) => {
+    setNoSyrup(false);
+    setSelectedSyrup(id);
+  };
+
+  const handleNoSyrup = () => {
+    setNoSyrup(true);
+    setSelectedSyrup(null);
   };
 
   const applyFavorite = (fav: Favorite) => {
@@ -62,14 +89,24 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
     setSelectedCereals(cerealIds);
     setSelectedToppings(toppingIds);
     setSelectedFavoriteId(fav.id);
-  };
-
-  const handleSave = () => {
-    onSave({ type, cereal_ids: selectedCereals, topping_ids: selectedToppings, syrup_id: selectedSyrup, favorite_id: selectedFavoriteId, notes });
+    setNoTopping(toppingIds.length === 0);
   };
 
   const isWater = type === 'water';
-  const canSave = isWater || selectedCereals.length > 0;
+  const cerealValid = isWater || selectedCereals.length > 0;
+  const toppingValid = isWater || noTopping || selectedToppings.length > 0;
+  const syrupValid = isWater || noSyrup || selectedSyrup !== null;
+  const canSave = cerealValid && toppingValid && syrupValid;
+
+  const handleSave = () => {
+    if (!canSave) {
+      setAttempted(true);
+      const firstInvalid = !cerealValid ? cerealRef : !toppingValid ? toppingRef : syrupRef;
+      firstInvalid.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    onSave({ type, cereal_ids: selectedCereals, topping_ids: selectedToppings, syrup_id: selectedSyrup, favorite_id: selectedFavoriteId, notes });
+  };
 
   const especialCereals = cereals.filter((c) => c.category === 'especial');
   const clasicoCereals = cereals.filter((c) => c.category === 'clasico');
@@ -97,6 +134,8 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
                   setSelectedCereals([]);
                   setSelectedToppings([]);
                   setSelectedSyrup(null);
+                  setNoTopping(false);
+                  setNoSyrup(false);
                 }
               }}
             >
@@ -127,8 +166,13 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
           )}
 
           {/* Cereals - Especiales */}
-          <div className="builder-section">
-            <div className="section-title">Cereales - Especiales</div>
+          <div className="builder-section" ref={cerealRef}>
+            <div className={`section-title ${attempted && !cerealValid ? 'section-title--error' : ''}`}>
+              Cereales - Especiales
+            </div>
+            {attempted && !cerealValid && (
+              <div className="section-error-msg">Selecciona al menos un cereal</div>
+            )}
             <div className="checkbox-group">
               {especialCereals.map((c) => (
                 <label
@@ -148,7 +192,9 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
 
           {/* Cereals - Clásicos */}
           <div className="builder-section">
-            <div className="section-title">Cereales - Clasicos</div>
+            <div className={`section-title ${attempted && !cerealValid ? 'section-title--error' : ''}`}>
+              Cereales - Clasicos
+            </div>
             <div className="checkbox-group">
               {clasicoCereals.map((c) => (
                 <label
@@ -167,14 +213,19 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
           </div>
 
           {/* Toppings */}
-          <div className="builder-section">
-            <div className="section-title">Toppings</div>
+          <div className="builder-section" ref={toppingRef}>
+            <div className={`section-title ${attempted && !toppingValid ? 'section-title--error' : ''}`}>
+              Toppings
+            </div>
+            {attempted && !toppingValid && (
+              <div className="section-error-msg">Selecciona un topping o "Sin topping"</div>
+            )}
             <div className="checkbox-group">
-              <label className={`checkbox-item ${selectedToppings.length === 0 ? 'selected' : ''}`}>
+              <label className={`checkbox-item ${noTopping ? 'selected' : ''}`}>
                 <input
                   type="checkbox"
-                  checked={selectedToppings.length === 0}
-                  onChange={() => setSelectedToppings([])}
+                  checked={noTopping}
+                  onChange={handleNoTopping}
                 />
                 Sin topping
               </label>
@@ -195,15 +246,20 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
           </div>
 
           {/* Syrups */}
-          <div className="builder-section">
-            <div className="section-title">Salsa</div>
+          <div className="builder-section" ref={syrupRef}>
+            <div className={`section-title ${attempted && !syrupValid ? 'section-title--error' : ''}`}>
+              Salsa
+            </div>
+            {attempted && !syrupValid && (
+              <div className="section-error-msg">Selecciona una salsa o "Sin salsa"</div>
+            )}
             <div className="checkbox-group">
-              <label className={`checkbox-item ${selectedSyrup === null ? 'selected' : ''}`}>
+              <label className={`checkbox-item ${noSyrup ? 'selected' : ''}`}>
                 <input
                   type="radio"
                   name="syrup"
-                  checked={selectedSyrup === null}
-                  onChange={() => setSelectedSyrup(null)}
+                  checked={noSyrup}
+                  onChange={handleNoSyrup}
                 />
                 Sin salsa
               </label>
@@ -216,7 +272,7 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
                     type="radio"
                     name="syrup"
                     checked={selectedSyrup === s.id}
-                    onChange={() => setSelectedSyrup(s.id)}
+                    onChange={() => handleSelectSyrup(s.id)}
                   />
                   {s.name}
                 </label>
@@ -242,7 +298,7 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
         <button className="btn-secondary" onClick={onClose}>
           Cancelar
         </button>
-        <button className="btn-primary" onClick={handleSave} disabled={!canSave}>
+        <button className="btn-primary" onClick={handleSave}>
           {editingItem ? 'Actualizar' : 'Guardar'}
         </button>
       </div>

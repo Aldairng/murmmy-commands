@@ -44,6 +44,23 @@
   color: var(--accent);
 }
 
+.section-title--error {
+  color: var(--danger);
+  animation: shake 0.3s ease;
+}
+
+.section-error-msg {
+  font-size: 0.75rem;
+  color: var(--danger);
+  margin-top: 0.25rem;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
 .builder-actions {
   display: flex;
   gap: 0.75rem;
