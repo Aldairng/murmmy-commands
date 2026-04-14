@@ -10,7 +10,7 @@ router.get('/', (_req, res) => {
   const ordersWithItems = (orders as any[]).map((order) => {
     const items = db.prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY created_at').all(order.id);
     return { ...order, items: resolveItems(items as any[]) };
-  });
+  }).filter((order) => order.items.length > 0);
   res.json(ordersWithItems);
 });
 
@@ -51,7 +51,7 @@ router.get('/table/:tableId', (req, res) => {
 // Add item to an order
 router.post('/:orderId/items', (req, res) => {
   const { orderId } = req.params;
-  const { type, cereal_ids = [], topping_ids = [], syrup_id = null, notes = '' } = req.body;
+  const { type, cereal_ids = [], topping_ids = [], syrup_id = null, notes = '', favorite_id = null } = req.body;
 
   if (!type) {
     res.status(400).json({ error: 'Type is required' });
@@ -65,8 +65,8 @@ router.post('/:orderId/items', (req, res) => {
   }
 
   const result = db.prepare(
-    'INSERT INTO order_items (order_id, type, cereal_ids, topping_ids, syrup_id, notes) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(orderId, type, JSON.stringify(cereal_ids), JSON.stringify(topping_ids), syrup_id, notes);
+    'INSERT INTO order_items (order_id, type, cereal_ids, topping_ids, syrup_id, notes, favorite_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(orderId, type, JSON.stringify(cereal_ids), JSON.stringify(topping_ids), syrup_id, notes, favorite_id);
 
   const item = db.prepare('SELECT * FROM order_items WHERE id = ?').get(result.lastInsertRowid);
   const resolvedItems = resolveItems([item as any]);
@@ -78,7 +78,7 @@ router.post('/:orderId/items', (req, res) => {
 // Update an item
 router.put('/:orderId/items/:itemId', (req, res) => {
   const { orderId, itemId } = req.params;
-  const { type, cereal_ids, topping_ids, syrup_id, notes } = req.body;
+  const { type, cereal_ids, topping_ids, syrup_id, notes, favorite_id } = req.body;
 
   const existing = db.prepare('SELECT * FROM order_items WHERE id = ? AND order_id = ?').get(itemId, orderId);
   if (!existing) {
@@ -87,13 +87,14 @@ router.put('/:orderId/items/:itemId', (req, res) => {
   }
 
   db.prepare(
-    'UPDATE order_items SET type = COALESCE(?, type), cereal_ids = COALESCE(?, cereal_ids), topping_ids = COALESCE(?, topping_ids), syrup_id = ?, notes = COALESCE(?, notes) WHERE id = ?'
+    'UPDATE order_items SET type = COALESCE(?, type), cereal_ids = COALESCE(?, cereal_ids), topping_ids = COALESCE(?, topping_ids), syrup_id = ?, notes = COALESCE(?, notes), favorite_id = ? WHERE id = ?'
   ).run(
     type,
     cereal_ids ? JSON.stringify(cereal_ids) : null,
     topping_ids ? JSON.stringify(topping_ids) : null,
     syrup_id !== undefined ? syrup_id : (existing as any).syrup_id,
     notes,
+    favorite_id !== undefined ? favorite_id : (existing as any).favorite_id,
     itemId
   );
 
@@ -119,6 +120,38 @@ router.delete('/:orderId/items/:itemId', (req, res) => {
   res.json({ message: 'Item deleted' });
 });
 
+// Advance prep status for a single item (new → making → completed)
+router.patch('/:orderId/items/:itemId/status', (req, res) => {
+  const { orderId, itemId } = req.params;
+  const existing = db.prepare('SELECT * FROM order_items WHERE id = ? AND order_id = ?').get(itemId, orderId) as any;
+  if (!existing) {
+    res.status(404).json({ error: 'Item not found' });
+    return;
+  }
+
+  const current = existing.prep_status ?? 'new';
+  if (current === 'completed') {
+    res.status(400).json({ error: 'Item already completed' });
+    return;
+  }
+
+  let updateSql: string;
+  const now = `datetime('now','localtime')`;
+
+  if (current === 'new') {
+    updateSql = `UPDATE order_items SET prep_status = 'making', prep_started_at = ${now} WHERE id = ?`;
+  } else {
+    updateSql = `UPDATE order_items SET prep_status = 'completed', prep_completed_at = ${now} WHERE id = ?`;
+  }
+
+  db.prepare(updateSql).run(itemId);
+  const updated = db.prepare('SELECT * FROM order_items WHERE id = ?').get(itemId);
+  const resolvedItems = resolveItems([updated as any]);
+
+  broadcast({ type: 'item_status_updated', data: { orderId: Number(orderId), item: resolvedItems[0] } });
+  res.json(resolvedItems[0]);
+});
+
 // Mark order as completed
 router.post('/:orderId/complete', (req, res) => {
   const { orderId } = req.params;
@@ -140,6 +173,7 @@ function resolveItems(items: any[]) {
   const cerealCache = new Map<number, string>();
   const toppingCache = new Map<number, string>();
   const syrupCache = new Map<number, string>();
+  const favoriteCache = new Map<number, string>();
 
   return items.map((item) => {
     const cerealIds: number[] = typeof item.cereal_ids === 'string' ? JSON.parse(item.cereal_ids) : item.cereal_ids || [];
@@ -170,6 +204,15 @@ function resolveItems(items: any[]) {
       syrupName = syrupCache.get(item.syrup_id)!;
     }
 
+    let favoriteName: string | null = null;
+    if (item.favorite_id) {
+      if (!favoriteCache.has(item.favorite_id)) {
+        const f = db.prepare('SELECT name FROM favorites WHERE id = ?').get(item.favorite_id) as { name: string } | undefined;
+        favoriteCache.set(item.favorite_id, f?.name || 'Unknown');
+      }
+      favoriteName = favoriteCache.get(item.favorite_id)!;
+    }
+
     return {
       ...item,
       cereal_ids: cerealIds,
@@ -177,6 +220,10 @@ function resolveItems(items: any[]) {
       cereal_names: cerealNames,
       topping_names: toppingNames,
       syrup_name: syrupName,
+      favorite_name: favoriteName,
+      prep_status: (item.prep_status ?? 'new') as 'new' | 'making' | 'completed',
+      prep_started_at: item.prep_started_at ?? null,
+      prep_completed_at: item.prep_completed_at ?? null,
     };
   });
 }

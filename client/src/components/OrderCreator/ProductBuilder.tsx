@@ -10,6 +10,7 @@ interface Props {
     cereal_ids: number[];
     topping_ids: number[];
     syrup_id: number | null;
+    favorite_id: number | null;
     notes: string;
   }) => void;
   onClose: () => void;
@@ -26,6 +27,7 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
   const [selectedCereals, setSelectedCereals] = useState<number[]>(editingItem?.cereal_ids || []);
   const [selectedToppings, setSelectedToppings] = useState<number[]>(editingItem?.topping_ids || []);
   const [selectedSyrup, setSelectedSyrup] = useState<number | null>(editingItem?.syrup_id || null);
+  const [selectedFavoriteId, setSelectedFavoriteId] = useState<number | null>(editingItem?.favorite_id || null);
   const [notes, setNotes] = useState(editingItem?.notes || '');
 
   useEffect(() => {
@@ -45,10 +47,12 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
   }, [apiFetch]);
 
   const toggleCereal = (id: number) => {
+    setSelectedFavoriteId(null);
     setSelectedCereals((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
   const toggleTopping = (id: number) => {
+    setSelectedFavoriteId(null);
     setSelectedToppings((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
@@ -57,10 +61,11 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
     const toppingIds = typeof fav.topping_ids === 'string' ? JSON.parse(fav.topping_ids) : fav.topping_ids;
     setSelectedCereals(cerealIds);
     setSelectedToppings(toppingIds);
+    setSelectedFavoriteId(fav.id);
   };
 
   const handleSave = () => {
-    onSave({ type, cereal_ids: selectedCereals, topping_ids: selectedToppings, syrup_id: selectedSyrup, notes });
+    onSave({ type, cereal_ids: selectedCereals, topping_ids: selectedToppings, syrup_id: selectedSyrup, favorite_id: selectedFavoriteId, notes });
   };
 
   const isWater = type === 'water';
@@ -111,7 +116,7 @@ export default function ProductBuilder({ editingItem, onSave, onClose }: Props) 
                 {favorites.map((fav) => (
                   <button
                     key={fav.id}
-                    className="checkbox-item"
+                    className={`checkbox-item ${selectedFavoriteId === fav.id ? 'selected' : ''}`}
                     onClick={() => applyFavorite(fav)}
                   >
                     {fav.name}

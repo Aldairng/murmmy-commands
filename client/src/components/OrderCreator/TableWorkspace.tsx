@@ -51,6 +51,7 @@ export default function TableWorkspace({ table, onBack }: Props) {
     cereal_ids: number[];
     topping_ids: number[];
     syrup_id: number | null;
+    favorite_id: number | null;
     notes: string;
   }) => {
     if (!order) return;
@@ -104,16 +105,45 @@ export default function TableWorkspace({ table, onBack }: Props) {
         {order?.items.map((item) => (
           <div key={item.id} className="item-card card">
             <div className="item-header">
-              <span className={`badge badge-${item.type}`}>
-                {item.type === 'icecream' ? 'Helado' : item.type === 'milkshake' ? 'Malteada' : 'Agua'}
-              </span>
+              <div className="item-header-badges">
+                <span className={`badge badge-${item.type}`}>
+                  {item.type === 'icecream' ? 'Helado' : item.type === 'milkshake' ? 'Malteada' : 'Agua'}
+                </span>
+                {item.type !== 'water' && (
+                  <span className="item-combo-name">
+                    {item.favorite_name ?? 'Crea tu Mezcla'}
+                  </span>
+                )}
+                {item.type !== 'water' && !item.favorite_name && (() => {
+                  const extraCereals = item.cereal_names.length - 1;
+                  const extraToppings = item.topping_names.length - 1;
+                  return (
+                    <>
+                      {extraCereals > 0 && (
+                        <span className="item-extra-badge">+{extraCereals} Cereal</span>
+                      )}
+                      {extraToppings > 0 && (
+                        <span className="item-extra-badge">+{extraToppings} Topping</span>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
               <div className="item-actions">
-                <button className="btn-secondary btn-sm" onClick={() => handleEditItem(item)}>
-                  Editar
-                </button>
-                <button className="btn-danger btn-sm" onClick={() => handleDeleteItem(item.id)}>
-                  Eliminar
-                </button>
+                {item.prep_status === 'new' ? (
+                  <>
+                    <button className="btn-secondary btn-sm" onClick={() => handleEditItem(item)}>
+                      Editar
+                    </button>
+                    <button className="btn-danger btn-sm" onClick={() => handleDeleteItem(item.id)}>
+                      Eliminar
+                    </button>
+                  </>
+                ) : (
+                  <span className={`item-prep-lock item-prep-lock--${item.prep_status}`}>
+                    {item.prep_status === 'making' ? 'Haciendo...' : 'Listo'}
+                  </span>
+                )}
               </div>
             </div>
             {item.type !== 'water' && (

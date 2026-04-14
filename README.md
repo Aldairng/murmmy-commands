@@ -49,13 +49,19 @@ That's it. The app will download automatically and start running.
 - From the shop PC: http://localhost:3000
 - From phones/tablets on the same Wi-Fi: `http://<pc-ip>:3000`
 
-To find the PC's IP, open CMD and run:
+To find the PC's IP, open **CMD or PowerShell on Windows** (not inside WSL) and run:
 
 ```bash
 ipconfig
 ```
 
-Look for the **IPv4 Address** under your Wi-Fi or Ethernet adapter (e.g. `192.168.1.100`).
+Look for the **IPv4 Address** under your Wi-Fi or Ethernet adapter — it looks like `192.168.x.x` or `10.0.x.x`. Use that IP, not the WSL internal one.
+
+> **Important:** Do NOT use `hostname -I` inside WSL — that gives the virtual WSL IP, which other devices on the network cannot reach. Always use the Windows `ipconfig` command to get the real network IP.
+
+netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=172.31.112.1
+
+New-NetFirewallRule -DisplayName "Murmmy Commandas" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
 
 ### Update to the latest version
 

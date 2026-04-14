@@ -39,11 +39,16 @@ export interface OrderItem {
   cereal_ids: number[];
   topping_ids: number[];
   syrup_id: number | null;
+  favorite_id: number | null;
   notes: string;
   created_at: string;
   cereal_names: string[];
   topping_names: string[];
   syrup_name: string | null;
+  favorite_name: string | null;
+  prep_status: 'new' | 'making' | 'completed';
+  prep_started_at: string | null;
+  prep_completed_at: string | null;
 }
 
 export interface Order {

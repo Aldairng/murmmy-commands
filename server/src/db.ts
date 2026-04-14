@@ -70,6 +70,24 @@ export function init() {
     );
   `);
 
+  // Migration: add favorite_id to order_items if it doesn't exist
+  try {
+    db.exec('ALTER TABLE order_items ADD COLUMN favorite_id INTEGER REFERENCES favorites(id)');
+  } catch {
+    // Column already exists, safe to ignore
+  }
+
+  // Migration: add prep status tracking columns
+  try {
+    db.exec(`ALTER TABLE order_items ADD COLUMN prep_status TEXT DEFAULT 'new' CHECK(prep_status IN ('new','making','completed'))`);
+  } catch { /* already exists */ }
+  try {
+    db.exec('ALTER TABLE order_items ADD COLUMN prep_started_at TEXT');
+  } catch { /* already exists */ }
+  try {
+    db.exec('ALTER TABLE order_items ADD COLUMN prep_completed_at TEXT');
+  } catch { /* already exists */ }
+
   seed();
 }
 

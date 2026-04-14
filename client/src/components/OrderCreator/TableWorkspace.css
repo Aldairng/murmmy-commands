@@ -44,11 +44,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.item-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.item-combo-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.item-extra-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .item-actions {
   display: flex;
   gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 .btn-sm {
@@ -74,6 +102,24 @@
   font-style: italic;
   padding-top: 0.25rem;
   border-top: 1px solid var(--border);
+}
+
+.item-prep-lock {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.item-prep-lock--making {
+  background: rgba(243, 156, 18, 0.18);
+  color: var(--warning);
+}
+
+.item-prep-lock--completed {
+  background: rgba(46, 204, 113, 0.18);
+  color: var(--success);
 }
 
 .workspace-actions {
