@@ -2,6 +2,44 @@
   max-width: 800px;
 }
 
+/* Stats row */
+.history-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+@media (max-width: 600px) {
+  .history-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Filter */
 .history-filter {
   display: flex;
   align-items: flex-end;
@@ -65,6 +103,15 @@
 
 .history-item-detail {
   color: var(--text-secondary);
+}
+
+.history-item-duration {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(46, 204, 113, 0.15);
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
 }
 
 .history-item-notes {

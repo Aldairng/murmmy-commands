@@ -34,6 +34,79 @@ router.get('/history', (req, res) => {
   res.json(ordersWithItems);
 });
 
+// Get history stats (averages)
+router.get('/history/stats', (req, res) => {
+  const { date } = req.query;
+
+  // Last 10 icecream avg
+  const avgIcecreamLast10 = db.prepare(`
+    SELECT AVG(
+      (julianday(oi.prep_completed_at) - julianday(oi.prep_started_at)) * 86400
+    ) as avg_seconds
+    FROM (
+      SELECT prep_started_at, prep_completed_at FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.status = 'completed' AND oi.type = 'icecream'
+        AND oi.prep_started_at IS NOT NULL AND oi.prep_completed_at IS NOT NULL
+      ORDER BY oi.prep_completed_at DESC LIMIT 10
+    ) oi
+  `).get() as { avg_seconds: number | null };
+
+  // Last 10 milkshake avg
+  const avgMilkshakeLast10 = db.prepare(`
+    SELECT AVG(
+      (julianday(oi.prep_completed_at) - julianday(oi.prep_started_at)) * 86400
+    ) as avg_seconds
+    FROM (
+      SELECT prep_started_at, prep_completed_at FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.status = 'completed' AND oi.type = 'milkshake'
+        AND oi.prep_started_at IS NOT NULL AND oi.prep_completed_at IS NOT NULL
+      ORDER BY oi.prep_completed_at DESC LIMIT 10
+    ) oi
+  `).get() as { avg_seconds: number | null };
+
+  // Period avg (filtered date or current month)
+  let periodWhere: string;
+  const periodParams: any[] = [];
+
+  if (date) {
+    periodWhere = `AND DATE(o.completed_at) = ?`;
+    periodParams.push(date);
+  } else {
+    periodWhere = `AND strftime('%Y-%m', o.completed_at) = strftime('%Y-%m', 'now', 'localtime')`;
+  }
+
+  const avgIcecreamPeriod = db.prepare(`
+    SELECT AVG(
+      (julianday(oi.prep_completed_at) - julianday(oi.prep_started_at)) * 86400
+    ) as avg_seconds
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.status = 'completed' AND oi.type = 'icecream'
+      AND oi.prep_started_at IS NOT NULL AND oi.prep_completed_at IS NOT NULL
+      ${periodWhere}
+  `).get(...periodParams) as { avg_seconds: number | null };
+
+  const avgMilkshakePeriod = db.prepare(`
+    SELECT AVG(
+      (julianday(oi.prep_completed_at) - julianday(oi.prep_started_at)) * 86400
+    ) as avg_seconds
+    FROM order_items oi
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.status = 'completed' AND oi.type = 'milkshake'
+      AND oi.prep_started_at IS NOT NULL AND oi.prep_completed_at IS NOT NULL
+      ${periodWhere}
+  `).get(...periodParams) as { avg_seconds: number | null };
+
+  res.json({
+    icecream_last10: avgIcecreamLast10.avg_seconds !== null ? Math.round(avgIcecreamLast10.avg_seconds) : null,
+    milkshake_last10: avgMilkshakeLast10.avg_seconds !== null ? Math.round(avgMilkshakeLast10.avg_seconds) : null,
+    icecream_period: avgIcecreamPeriod.avg_seconds !== null ? Math.round(avgIcecreamPeriod.avg_seconds) : null,
+    milkshake_period: avgMilkshakePeriod.avg_seconds !== null ? Math.round(avgMilkshakePeriod.avg_seconds) : null,
+  });
+});
+
 // Get or create the active order for a table
 router.get('/table/:tableId', (req, res) => {
   const { tableId } = req.params;

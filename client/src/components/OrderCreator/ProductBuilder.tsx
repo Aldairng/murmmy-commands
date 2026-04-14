@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Cereal, Topping, Syrup, Favorite, OrderItem } from '../../types';
 import './ProductBuilder.css';

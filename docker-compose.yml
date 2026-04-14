@@ -1,7 +1,6 @@
 services:
   commandas:
-    build: .
-    # image: aldaiirnava/murmmy-commandas:latest ### TODO: Uncomment when ready to deploy
+    image: aldaiirnava/murmmy-commandas:latest ### TODO: Uncomment when ready to deploy
     ports:
       - "3000:3000"
     volumes:
